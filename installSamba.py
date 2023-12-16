@@ -49,7 +49,7 @@ def averiguar_DC(red):
         
         # Escaneamos los puertos de cada dirección ip
         nmap = "nmap -p- --open -sV "+direccion_ip
-        print(nmap)
+        
         # Convierto a texto la salida de nmap
         
         salida_nmap = subprocess.check_output(nmap, shell=True)
