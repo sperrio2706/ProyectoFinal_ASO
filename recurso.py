@@ -12,8 +12,7 @@ import re
 import os
 import subprocess
 import datetime
-# El paquete python3-winrm debe estar instalado
-import winrm
+import shutil
 
 #--------------------------------------------------------------------------
 # FUNCIONES
@@ -38,6 +37,24 @@ def configurar(fichero):
         file.close()
     else:
         escribir_en_log("Archivo incorrecto introducido")
+
+# Funciñon que instala powershell
+def instalar_powershell(url_paquete_powershell_deb):
+
+    subprocess.run(['wget', url_paquete_powershell_deb])
+
+    # Obtenemos el nombre del archivo de la URL
+    fichero = os.path.basename(url_paquete_powershell_deb)
+
+    # Instalamos Powershell
+    subprocess.run(['dpkg', '-i', fichero])
+
+    # Instalamos las dependencias que faltan
+    subprocess.run(['apt-get', 'install', '-f'])
+
+    #Borramos el fichero que hemos descargado
+    os.remove(fichero)
+
 
 # Función que comprueba si estas unido al dominio
 def unido_Dominio(dominio):
@@ -97,11 +114,24 @@ SERVER = 'serverad.' + DOMINIO
 USUARIO = 'Administrador'
 PASSWORD = 'Departamento1!'
 
+
+# Si wget no está instalado, lo instala
+if shutil.which('wget') is None:
+    instalar_paquetes('wget')
+    
+# Si powershell no está instalado, lo instala
+if shutil.which('pwsh') is None:
+    instalar_powershell(url_paquete_powershell_deb)
+
+
 # si estamos unidos al dominio
 
 # Comprobamos si el grupo especificado existe
 #if not existe_grupo(GRUPO):
 #    crea_grupo_remoto(GRUPO)
+
+
+
 
 if unido_Dominio("NAVIDAD.COM"):
     print ("unido")
