@@ -29,14 +29,26 @@ def escribir_en_log(cadena):
     log.close()
 
 # Función que añade la plantilla al fichero
-def configurar(fichero):
-    if fichero == "smb.conf":
-        # Lo abrimos en modo adición para que sobre escriba
-        file = open("/etc/samba/" + fichero, "a")
+def configurar_recurso(recurso):
+    edita = True
+    
+    # Si no existe el recurso lo crea
+    # Buscamos el grupo en el texto de salida de getent group (le pasamos el fichero de samba en modo lectura)
+    samba = open("/etc/samba/smb.conf", "r")
+    patron_recurso = re.compile(rf'\[{re.escape(recurso)}\]')
+    coincidencia = patron_recurso.search(samba.read())
+    samba.close()
+    
+    # Si encuentra coincidencias, el recurso estará creado, así que no lo crea
+    if coincidencia:
+        edita = False
+        escribir_en_log("El recurso " + recurso + " ya esta creado")
+    else:
+        # Lo abrimos en modo adición para que escriba debajo 
+        file = open("/etc/samba/smb.conf", "a")
         file.write(SMB_RECURSO)
         file.close()
-    else:
-        escribir_en_log("Archivo incorrecto introducido")
+        
 
 # Función que comprueba si estas unido al dominio
 def unido_Dominio(dominio):
@@ -84,8 +96,6 @@ def crea_grupo_remoto(maquina_remota, dominio, usuario, password, UnidadOrganiza
     
     return salida
 
-def existe_recurso(recurso):
-    print()
 
 #--------------------------------------------------------------------------
 # VARIABLES
@@ -134,20 +144,26 @@ if not unido_Dominio("NAVIDAD.COM"):
 # Si el grupo existe configura samba y si no, lo crea y después lo configura
 if not existe_grupo(GRUPO):
     # LLamamos a la función que ejecuta el comando remoto por winrm
-    crea_grupo_remoto(GRUPO)
     escribir_en_log("El grupo no existe, creandolo...")
+    salida_powershell = crea_grupo_remoto(SERVER, DOMINIO, USUARIO, PASSWORD, OU, GRUPO)
+    escribir_en_log(salida_powershell)
 
-# Si existe no entra en el if y configura directamente
-configurar("smb.conf")
+# Si existe no entra en el if y configura directamente el recurso
+escribir_en_log("Intentando crear recurso")
+configurar_recurso(RECURSO)
 
 # Mostramos la configuración de samba tras la ejecución del script en el log
 escribir_en_log("La configuración actual de /etc/samba/smb.conf es:")
 samba = open("/etc/samba/smb.conf", "r")
 escribir_en_log(samba.read())
 
-salida_powershell = crea_grupo_remoto(SERVER, DOMINIO, USUARIO, PASSWORD, OU, GRUPO)
-print(salida_powershell)
-
+# Reiniciamos el servicio de samba
+# Reiniciamos smb y nmbd
+try:
+    subprocess.run(["systemctl", "restart", "smbd", "nmbd"])
+    escribir_en_log("Reiniciando los demonios de samba")
+except:
+    escribir_en_log("Fallo al reiniciar los demonios de samba")
 
 
 escribir_en_log("FIN DEL PROGRAMA  (" + fecha_hora + ")")
