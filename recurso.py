@@ -12,7 +12,7 @@ import re
 import os
 import subprocess
 import datetime
-import shutil
+import winrm
 
 #--------------------------------------------------------------------------
 # FUNCIONES
@@ -89,13 +89,19 @@ def existe_grupo(grupo):
     
     
 # Función que crea el grupo en AD
-def crea_grupo_remoto(maquina_remota, dominio, usuario, password, grupo_a_crear):
+def crea_grupo_remoto(maquina_remota, dominio, usuario, password, UnidadOrganizativa, grupo_a_crear):
     # Nos conectamos por winrm a la DC (suponemos que somos trusted en el DC)
-    # session = winrm.Session(maquina_remota, auth=(usuario, password))
+    session = winrm.Session(maquina_remota, auth=(usuario, password))
     
-    session = winrm.Session(maquina_remota, auth=('{}@{}'.format(usuario,dominio), password), transport='ntlm')
-    result = session.run_ps('ipconfig')
-    return result
+    # Ejecutamos el cmd-let remotamente para crear el grupo
+    result = session.run_ps(f'New-ADGroup -Name "{grupo_a_crear}" -SamAccountName "{grupo_a_crear}" -GroupCategory Security -GroupScope Global -DisplayName "{grupo_a_crear}" -Path "CN={UnidadOrganizativa},DC={dominio},DC=com" -Description "Grupo creado mediante script en debian"')
+    
+    # Devolvemos la salida del cmd-let en utf-8
+    salida = result.std_out
+    salida = salida.decode("utf-8", errors='ignore')
+    
+    return salida
+
 
 #--------------------------------------------------------------------------
 # VARIABLES
@@ -105,32 +111,21 @@ if len(sys.argv) != 3 or type(sys.argv[1]) != str or type(sys.argv[2]) != str:
     print("Error en los argumentos. USO -> recurso <nombre_recurso> <grupo>")
     exit(1)
 
+LOG = "/var/log/log_creacion_recursos"
 RECURSO = sys.argv[1]
 GRUPO = sys.argv[2]
-LOG = "/var/log/log_creacion_recursos"
+OU = "MisGrupos"
 fecha_hora = (str(get_datetime()).split('.'))[0].replace(":", "·")
 DOMINIO = 'navidad.com'
 SERVER = 'serverad.' + DOMINIO
 USUARIO = 'Administrador'
 PASSWORD = 'Departamento1!'
 
-
-# Si wget no está instalado, lo instala
-if shutil.which('wget') is None:
-    instalar_paquetes('wget')
-    
-# Si powershell no está instalado, lo instala
-if shutil.which('pwsh') is None:
-    instalar_powershell(url_paquete_powershell_deb)
-
-
 # si estamos unidos al dominio
 
 # Comprobamos si el grupo especificado existe
 #if not existe_grupo(GRUPO):
 #    crea_grupo_remoto(GRUPO)
-
-
 
 
 if unido_Dominio("NAVIDAD.COM"):
@@ -142,6 +137,7 @@ if existe_grupo(GRUPO):
     print ("existe")
 else:
     print("no existe")
+    
 # Platilla para añadir al fichero smb.conf
 SMB_RECURSO = f"""
 [{RECURSO}]
@@ -154,5 +150,5 @@ valid users = @{GRUPO}
 
 print (SMB_RECURSO)
 
-salida_powershell = crea_grupo_remoto(SERVER, DOMINIO, USUARIO, PASSWORD, GRUPO)
+salida_powershell = crea_grupo_remoto(SERVER, DOMINIO, USUARIO, PASSWORD, OU, GRUPO)
 print(salida_powershell)
