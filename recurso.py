@@ -38,11 +38,25 @@ def configurar(fichero):
     else:
         escribir_en_log("Archivo incorrecto introducido")
 
+# Función que comprueba si tienes instalado el paquete python3-winrm
+# Si no está instalado lo instala
+def instala_pywinrm():
+    print("instlando pywinrm")
+
 # Función que comprueba si estas unido al dominio
 def unido_Dominio(dominio):
+    unido = False
     comando = "net ads info"
     salida = subprocess.check_output(comando, shell=True)
     salida = salida.decode("utf-8")
+    
+    # Buscamos el grupo en el texto de salida de getent group
+    patron_realm = re.compile(r'Realm:\s+(\S+)')
+    coincidencia = patron_realm.search(salida)
+    
+    if coincidencia:
+        unido = True
+    return unido
     
     
 # Función que comprueba si el grupo que le pasemos existe en AD (devuelve true o fale)
@@ -52,13 +66,15 @@ def existe_grupo(grupo):
     grupos = subprocess.check_output(comando, shell=True)
     grupos = grupos.decode("utf-8")
     
-    # Buscamos el grupo en el texto de salida de getent group
-    patron_realm = re.compile(r'Realm:\s+(\S+)')
-    coincidencia = patron_realm.search(grupo)
+    # Utilizar expresión regular para buscar el grupo en la salida
+    patron_grupo = re.compile(rf'^{re.escape(grupo)}(?=:)')
+    coincidencia = patron_grupo.search(grupos)
     
     if coincidencia:
         existe = True
     return existe
+    
+    
     
 # Función que crea el grupo en AD
 def crea_grupo_remoto(grupo):
@@ -86,11 +102,15 @@ fecha_hora = (str(get_datetime()).split('.'))[0].replace(":", "·")
 #if not existe_grupo(GRUPO):
 #    crea_grupo_remoto(GRUPO)
 
+if unido_Dominio("NAVIDAD.COM"):
+    print ("unido")
+else:
+    print("no unido")
+
 if existe_grupo(GRUPO):
     print ("existe")
 else:
     print("no existe")
-
 # Platilla para añadir al fichero smb.conf
 SMB_RECURSO = f"""
 [{RECURSO}]
