@@ -90,7 +90,7 @@ def crea_grupo_remoto(maquina_remota, dominio, usuario, password, UnidadOrganiza
     # Ejecutamos el cmd-let remotamente para crear el grupo
     result = session.run_ps(f'New-ADGroup -Name "{grupo_a_crear}" -SamAccountName "{grupo_a_crear}" -GroupCategory Security -GroupScope Global -DisplayName "{grupo_a_crear}" -Path "CN={UnidadOrganizativa},DC={dominio},DC=com" -Description "Grupo creado mediante script en debian"')
     
-    # Devolvemos la salida del cmd-let en utf-8
+    # Manejamos la salida de PowerShell
     salida = result.std_out
     salida = salida.decode("utf-8", errors='ignore')
     
