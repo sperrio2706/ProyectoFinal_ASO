@@ -12,6 +12,7 @@ import re
 import os
 import subprocess
 import datetime
+# El paquete python3-winrm debe estar instalado
 import winrm
 
 #--------------------------------------------------------------------------
@@ -38,11 +39,6 @@ def configurar(fichero):
     else:
         escribir_en_log("Archivo incorrecto introducido")
 
-# Función que comprueba si tienes instalado el paquete python3-winrm
-# Si no está instalado lo instala
-def instala_pywinrm():
-    print("instlando pywinrm")
-
 # Función que comprueba si estas unido al dominio
 def unido_Dominio(dominio):
     unido = False
@@ -67,7 +63,7 @@ def existe_grupo(grupo):
     grupos = grupos.decode("utf-8")
     
     # Utilizar expresión regular para buscar el grupo en la salida
-    patron_grupo = re.compile(rf'^{re.escape(grupo)}(?=:)')
+    patron_grupo = re.compile(rf"{grupo}:")
     coincidencia = patron_grupo.search(grupos)
     
     if coincidencia:
@@ -75,13 +71,14 @@ def existe_grupo(grupo):
     return existe
     
     
-    
 # Función que crea el grupo en AD
-def crea_grupo_remoto(grupo):
+def crea_grupo_remoto(maquina_remota, dominio, usuario, password, grupo_a_crear):
     # Nos conectamos por winrm a la DC (suponemos que somos trusted en el DC)
-    s = winrm.Session('serverad.navidad.com', auth=('Administrador', 'Departamento1!'))
-    r = s.run_cmd('ipconfig', ['/all'])
-    return r
+    # session = winrm.Session(maquina_remota, auth=(usuario, password))
+    
+    session = winrm.Session(maquina_remota, auth=('{}@{}'.format(usuario,dominio), password), transport='ntlm')
+    result = session.run_ps('ipconfig')
+    return result
 
 #--------------------------------------------------------------------------
 # VARIABLES
@@ -95,6 +92,10 @@ RECURSO = sys.argv[1]
 GRUPO = sys.argv[2]
 LOG = "/var/log/log_creacion_recursos"
 fecha_hora = (str(get_datetime()).split('.'))[0].replace(":", "·")
+DOMINIO = 'navidad.com'
+SERVER = 'serverad.' + DOMINIO
+USUARIO = 'Administrador'
+PASSWORD = 'Departamento1!'
 
 # si estamos unidos al dominio
 
@@ -116,12 +117,12 @@ SMB_RECURSO = f"""
 [{RECURSO}]
 comment = "Recurso compartido samba"
 path = /opt/{RECURSO}
-browsable = yes
-writable = yes
-guest ok = yes
 create mask = 0770
 read only = no
 valid users = @{GRUPO}
 """
 
 print (SMB_RECURSO)
+
+salida_powershell = crea_grupo_remoto(SERVER, DOMINIO, USUARIO, PASSWORD, GRUPO)
+print(salida_powershell)
