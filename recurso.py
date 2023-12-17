@@ -38,24 +38,6 @@ def configurar(fichero):
     else:
         escribir_en_log("Archivo incorrecto introducido")
 
-# Funciñon que instala powershell
-def instalar_powershell(url_paquete_powershell_deb):
-
-    subprocess.run(['wget', url_paquete_powershell_deb])
-
-    # Obtenemos el nombre del archivo de la URL
-    fichero = os.path.basename(url_paquete_powershell_deb)
-
-    # Instalamos Powershell
-    subprocess.run(['dpkg', '-i', fichero])
-
-    # Instalamos las dependencias que faltan
-    subprocess.run(['apt-get', 'install', '-f'])
-
-    #Borramos el fichero que hemos descargado
-    os.remove(fichero)
-
-
 # Función que comprueba si estas unido al dominio
 def unido_Dominio(dominio):
     unido = False
@@ -102,6 +84,8 @@ def crea_grupo_remoto(maquina_remota, dominio, usuario, password, UnidadOrganiza
     
     return salida
 
+def existe_recurso(recurso):
+    print()
 
 #--------------------------------------------------------------------------
 # VARIABLES
@@ -121,34 +105,49 @@ SERVER = 'serverad.' + DOMINIO
 USUARIO = 'Administrador'
 PASSWORD = 'Departamento1!'
 
-# si estamos unidos al dominio
-
-# Comprobamos si el grupo especificado existe
-#if not existe_grupo(GRUPO):
-#    crea_grupo_remoto(GRUPO)
-
-
-if unido_Dominio("NAVIDAD.COM"):
-    print ("unido")
-else:
-    print("no unido")
-
-if existe_grupo(GRUPO):
-    print ("existe")
-else:
-    print("no existe")
-    
 # Platilla para añadir al fichero smb.conf
 SMB_RECURSO = f"""
 [{RECURSO}]
-comment = "Recurso compartido samba"
+comment = "Recurso compartido del grupo {GRUPO}"
 path = /opt/{RECURSO}
 create mask = 0770
 read only = no
 valid users = @{GRUPO}
 """
 
-print (SMB_RECURSO)
+#--------------------------------------------------------------------------
+# PROGRAMA 
+
+# Generamos una cabecera para el log
+cabecera = '\n' 
+cabecera += '[ ' + fecha_hora + ']' + '\n'
+cabecera += '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~' + '\n'  
+cabecera += '@  FICHERO DE LOG [Unión al dominio]   @' + '\n' 
+cabecera += '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~' + '\n'
+escribir_en_log(cabecera)
+
+# Si estamos en el dominio se acaba el programa
+if not unido_Dominio("NAVIDAD.COM"):
+    escribir_en_log("La máquina no está unida al dominio")
+    exit(2)
+
+# Si el grupo existe configura samba y si no, lo crea y después lo configura
+if not existe_grupo(GRUPO):
+    # LLamamos a la función que ejecuta el comando remoto por winrm
+    crea_grupo_remoto(GRUPO)
+    escribir_en_log("El grupo no existe, creandolo...")
+
+# Si existe no entra en el if y configura directamente
+configurar("smb.conf")
+
+# Mostramos la configuración de samba tras la ejecución del script en el log
+escribir_en_log("La configuración actual de /etc/samba/smb.conf es:")
+samba = open("/etc/samba/smb.conf", "r")
+escribir_en_log(samba.read())
 
 salida_powershell = crea_grupo_remoto(SERVER, DOMINIO, USUARIO, PASSWORD, OU, GRUPO)
 print(salida_powershell)
+
+
+
+escribir_en_log("FIN DEL PROGRAMA  (" + fecha_hora + ")")
