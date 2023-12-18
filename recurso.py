@@ -84,11 +84,14 @@ def existe_grupo(grupo):
     
 # Función que crea el grupo en AD
 def crea_grupo_remoto(maquina_remota, dominio, usuario, password, UnidadOrganizativa, grupo_a_crear):
+    # Ruta del script de creación de grupos en el servidor AD
+    RUTA_SCRIPT = r"""C:\Users\Administrador\scripts\creacion_grupos.ps1"""
+    
     # Nos conectamos por winrm a la DC (suponemos que somos trusted en el DC)
     session = winrm.Session(maquina_remota, auth=(usuario, password))
     
     # Ejecutamos el cmd-let remotamente para crear el grupo
-    result = session.run_ps(f'New-ADGroup -Name "{grupo_a_crear}" -SamAccountName "{grupo_a_crear}" -GroupCategory Security -GroupScope Global -DisplayName "{grupo_a_crear}" -Path "CN={UnidadOrganizativa},DC={dominio},DC=com" -Description "Grupo creado mediante script en debian"')
+    result = session.run_ps(RUTA_SCRIPT)
     
     # Manejamos la salida de PowerShell
     salida = result.std_out
@@ -114,6 +117,7 @@ DOMINIO = 'navidad.com'
 SERVER = 'serverad.' + DOMINIO
 USUARIO = 'Administrador'
 PASSWORD = 'Departamento1!'
+
 
 # Platilla para añadir al fichero smb.conf
 SMB_RECURSO = f"""
