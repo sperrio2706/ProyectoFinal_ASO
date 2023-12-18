@@ -85,7 +85,7 @@ def existe_grupo(grupo):
 # Función que crea el grupo en AD
 def crea_grupo_remoto(maquina_remota, dominio, usuario, password, UnidadOrganizativa, grupo_a_crear):
     # Ruta del script de creación de grupos en el servidor AD
-    RUTA_SCRIPT = r'C:\Users\Administrador\scripts\creacion_grupos.ps1'
+    RUTA_SCRIPT = rf'C:\Users\Administrador\scripts\creacion_grupos.ps1'
     
     # Separamos las componentes del dominio
     componentes = dominio.split(".")
@@ -97,7 +97,7 @@ def crea_grupo_remoto(maquina_remota, dominio, usuario, password, UnidadOrganiza
     session = winrm.Session(maquina_remota, auth=(usuario, password))
     
     # Ejecutamos el cmd-let remotamente para crear el grupo
-    result = session.run_ps(rf'powershell.exe -File "{RUTA_SCRIPT}" -grupo "{grupo_a_crear}" -dominio "{primera_componente}"')
+    result = session.run_ps(rf"""powershell.exe -File '{RUTA_SCRIPT}' -grupo '{grupo_a_crear}' -dominio '{primera_componente}'""")
     
     # Manejamos la salida de PowerShell
     salida = result.std_out
