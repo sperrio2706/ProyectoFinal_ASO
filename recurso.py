@@ -9,7 +9,6 @@
 # BIBLIOTECAS
 import sys
 import re
-import os
 import subprocess
 import datetime
 import winrm
