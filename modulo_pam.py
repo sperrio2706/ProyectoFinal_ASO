@@ -6,16 +6,20 @@ def pam_sm_authenticate(pamh, flags, argv):
     print (f"Comprobando si el {usuario} está en el dominio: ")
     usuarios = subprocess.check_output("getent passwd", shell = True)
     # Guardamos en una variable la salida de smb.conf
-    contenido_smb = subprocess.check_output("cat /etc/samba/smb.conf", shell = True)
-   
-    # Buscamos coincidencias en la salida de smb
+    contenido_smb = open("/etc/samba/smb.conf", "r")
+    
+    # Buscamos coincidencias en smb.conf
     expresion_regular = r'range\s*=\s*(\d+)-(\d+)'
-    coincidencias = re.search(expresion_regular, contenido_smb)
+    coincidencias = re.search(expresion_regular, contenido_smb.read())
+    
+    # Cerramos smb.conf
+    contenido_smb.close()
 
     if coincidencias:
         idmap_inicio = coincidencias.group(1)
         idmap_fin = coincidencias.group(2)
 
+    print (f"IDMAP_INICIO    {idmap_inicio} y IDMAP_FIN    {idmap_fin}")
     # Generamos un array con las lineas de la salida de getent
     passwd_lineas = usuarios.strip().split('\n')
 
@@ -24,9 +28,12 @@ def pam_sm_authenticate(pamh, flags, argv):
         partes = linea.split(':')
         usuario_actual = partes[0]
         uid = int(partes[2])
+        print(usuario_actual)
+        print(uid)
 
     # Si el usuario actual es igual al usuario y el uid está entre lo que lea
         if usuario_actual == usuario and idmap_inicio <= uid <= idmap_fin:
+            print (f"El usuario {usuario} está en el dominio")
             return pamh.PAM_SUCCESS
     return pamh.PAM_AUTH_ERR
         
