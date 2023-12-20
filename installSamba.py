@@ -28,7 +28,7 @@ def get_ip():
         escribir_en_log(f"""Error al obtener la dirección IP privada: {e}""")
         return None
 
-# Función que consulta la hora del sistema
+# Función que consulta la hora del sistema  
 def get_datetime():
 	fecha_hora = datetime.datetime.now()
 	return fecha_hora
@@ -134,7 +134,6 @@ LOG = "/var/log/log_union_dominio"
 NOMBRE_MAQUINA = sys.argv[1]
 DOMINIO = sys.argv[2]
 DOMINIO_MAYUS = DOMINIO.upper()
-print(DOMINIO_MAYUS)
 USUARIO = sys.argv[3]
 PASSWORD = sys.argv[4]
 MI_IP = get_ip()
@@ -154,7 +153,7 @@ if not info_DC:
     escribir_en_log("No se ha encontrado ningún controlador de dominio")
     escribir_en_log("Saliendo del programa")
     exit(2)
-print("Averigua ip del DC: " + info_DC[0]+"      "+info_DC[1])
+
 
 
 # Contenido de smb.conf
